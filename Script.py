@@ -8,8 +8,10 @@ from Cryptodome.Random import get_random_bytes
 from Cryptodome.Protocol.KDF import PBKDF2
 # from Cryptodome.Util.Padding import pad, unpad
 from Cryptodome.Hash import SHA512
-import subprocess
-import sys
+import subprocess, sys
+from pyqldb.config.retry_config import RetryConfig
+from pyqldb.driver.qldb_driver import QldbDriver
+from datetime import datetime
 
 load_dotenv()
 
@@ -17,6 +19,9 @@ connectionString=os.getenv("ConnectionString")
 contractAddress=os.getenv("Address")
 ABI=os.getenv("ABI")
 alchemyURL=os.getenv("AlchemyURL")
+
+IPFS_CID=""
+USER_PUBLIC_ADDRESS=""
 
 ca = certifi.where()
 
@@ -56,6 +61,7 @@ def TransferToken():
                 p = subprocess.Popen(["node", "/Users/aryaa/Desktop/REWARDENGINESCRIPT/ipfsScript.js", sys.executable], stdout=subprocess.PIPE)
                 out = p.stdout.read()
                 CID=out.decode()
+                IPFS_CID=CID
                 print(CID)
 
                 # Decryption Part
@@ -97,11 +103,31 @@ schedule.every().day.at("00:00").do(readDocumments)
 schedule.every().monday.at('21:00').do(TransferToken)
 while 1:
         schedule.run_pending()
-        time.sleep(1)        
-
-             
+        time.sleep(1)   
 
 
+# QLDB Script From Here  
 
+retry_config = RetryConfig(retry_limit=3)
 
+print("Initializing the driver")
 
+qldb_driver = QldbDriver("IPFSCIDLedger", retry_config=retry_config)
+
+def insert_documents(transaction_executor, aws_ion):
+    print("Inserting a document into IPFSCIDLedger")
+    transaction_executor.execute_statement(f"INSERT INTO USER_ADDRESS_IPFS_CID ?", aws_ion)
+
+IPFS_CID="xq5xfqxvqtfy44422"
+
+USER_PUBLIC_ADDRESS="xfyatsfxafx7755"
+
+user_meta_data = { 
+            'CID': IPFS_CID,
+            'DATE': datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+            'User_Public_Address': USER_PUBLIC_ADDRESS
+          }
+
+qldb_driver.execute_lambda(lambda x: insert_documents(x, user_meta_data))
+
+print(f"Document with CID ${IPFS_CID} Inserted to USER_ADDRESS_IPFS_CID Table")
