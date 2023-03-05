@@ -11,6 +11,19 @@ from Cryptodome.Protocol.KDF import PBKDF2
 from Cryptodome.Hash import SHA512
 import subprocess
 import sys
+import mysql.connector
+import pymongo, base64
+import os, bson, certifi
+import schedule, time
+import subprocess, sys
+from web3 import Web3
+from dotenv import load_dotenv
+from Cryptodome.Cipher import AES
+from Cryptodome.Protocol.KDF import scrypt
+from Cryptodome.Util.Padding import pad, unpad
+from pyqldb.config.retry_config import RetryConfig
+from pyqldb.driver.qldb_driver import QldbDriver
+from datetime import datetime
 
 load_dotenv()
 
@@ -21,6 +34,7 @@ alchemyURL=os.getenv("AlchemyURL")
 
 IPFS_CID=""
 USER_PUBLIC_ADDRESS=""
+
 
 ca = certifi.where()
 
@@ -43,13 +57,24 @@ def TransferToken():
                 totalDft=datas["DFT"]
                 Address=datas["useraddress"]
                 contract.functions.transfer(Address,totalDft).call()
+                collection.update_one({"useraddress":datas["useraddress"]},{"$inc":{"DFT":-datas["DFT"]}})
 
-                bytedata = datas.encode('UTF-8')
-                # print(bytedata)
+                cursorObject=database.cursor()
+                query="SELECT * FROM users where publicAddres=Address"
+                cursorObject.execute(query)
+                myresult=cursorObject.fetchall()
+                print(myresult)
 
-                key16 = 'c80667c845f47d0a5351e67ef968bcb9'
-                key32 = "6b5c8247110a6dc685a1a25c01f28b0d47bd0d5b36456b5242e801ebcb4c5a67"
-                salt = bytes.fromhex(key16)
+                passwdkey_b64=myresult.passwdkey_b64
+                saltkey_b64=myresult.saltkey_b64
+                
+
+                data_bytes= datas.encode('UTF-8')
+                
+
+                # passwdkey_b64 = "R15M44oRjYaJP+RQmT53E9Nlz9SBQL1HaAKefOt+9Ws="
+                # saltkey_b64 = "5evW1aCyDNX6red6Lf0B8KvpnTgdfDZN8pbnQNh1ua8="
+
 
                 passwd_bytes = base64.b64decode(passwdkey_b64)
                 salt_bytes = base64.b64decode(saltkey_b64)
@@ -94,12 +119,12 @@ def TransferToken():
                 AES_cipher_instance = AES.new(key, AES.MODE_GCM, nonce=nonce_bytes)
 
                 plaintext_bytes = unpad(AES_cipher_instance.decrypt_and_verify(ciphertext_bytes, tag_bytes), AES.block_size)
-
-                cipher = AES.new(key, AES.MODE_EAX, nonce)
-                data = cipher.decrypt_and_verify(ciphertext, tag)
-                print(data)
                 
-                collection.update_one({"useraddress":datas["useraddress"]},{"$inc":{"DFT":-datas["DFT"]}})
+                plaintext = plaintext_bytes.decode('utf-8')
+
+                print(plaintext)
+                
+        database.close()  
 
 
 def readDocumments():
