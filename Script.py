@@ -10,6 +10,7 @@ from Cryptodome.Protocol.KDF import PBKDF2
 from Cryptodome.Hash import SHA512
 import subprocess
 import sys
+import mysql.connector
 
 load_dotenv()
 
@@ -26,6 +27,13 @@ def TransferToken():
                 counter=counter+1
         web3=Web3(Web3.HTTPProvider(alchemyURL))
         contract=web3.eth.contract(address=contractAddress,abi=ABI)
+        database=mysql.connector.connect(
+                host="DB_ENDPOINT",
+                user= "admin",
+                password="<DB_PASSWORD>",
+                port= 3302,
+                database="myDB"
+        )
         Data=collection.find()
         for datas in Data:
 
@@ -34,10 +42,21 @@ def TransferToken():
                 contract.functions.transfer(Address,totalDft).call()
 
                 bytedata = datas.encode('UTF-8')
-                # print(bytedata)
+                print(bytedata)
 
-                key16 = 'c80667c845f47d0a5351e67ef968bcb9'
-                key32 = "6b5c8247110a6dc685a1a25c01f28b0d47bd0d5b36456b5242e801ebcb4c5a67"
+                # cursorObject=database.cursor()
+
+                # query="SELECT * FROM users where publicAddres=Address"
+
+                # cursorObject.execute(query)
+
+                # myresult=cursorObject.fetchall()
+
+                # key16=myresult.initVector
+                # key32=myresult.securityKey
+
+                # key16 = 'c80667c845f47d0a5351e67ef968bcb9'
+                # # key32 = "6b5c8247110a6dc685a1a25c01f28b0d47bd0d5b36456b5242e801ebcb4c5a67"
                 salt = bytes.fromhex(key16)
 
                 key = PBKDF2(key32, salt, 32, count=100000, hmac_hash_module=SHA512)
@@ -68,6 +87,7 @@ def TransferToken():
                 print(data)
                 
                 collection.update_one({"useraddress":datas["useraddress"]},{"$inc":{"DFT":-datas["DFT"]}})
+        database.close()
 
 
 def readDocumments():

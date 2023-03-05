@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/d-frame-core/Reward_Engine_AES_Encryption#readme",
   "dependencies": {
-    "ipfs-http-client": "^59.0.0"
+    "ipfs-http-client": "^59.0.0",
+    "mysql": "^2.18.1"
   }
 }
