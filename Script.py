@@ -60,13 +60,12 @@ def TransferToken():
                 collection.update_one({"useraddress":datas["useraddress"]},{"$inc":{"DFT":-datas["DFT"]}})
 
                 cursorObject=database.cursor()
-                query="SELECT * FROM users where publicAddres=Address"
+                query="SELECT * FROM users where publicAddress='{}'".format(Address)
                 cursorObject.execute(query)
                 myresult=cursorObject.fetchall()
-                print(myresult)
 
-                passwdkey_b64=myresult.passwdkey_b64
-                saltkey_b64=myresult.saltkey_b64
+                passwdkey_b64=myresult[0][1]
+                saltkey_b64=myresult[0][2]
                 
 
                 data_bytes= datas.encode('UTF-8')
