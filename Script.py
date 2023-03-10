@@ -99,29 +99,29 @@ def TransferToken():
 
                 # Decryption Part
 
-                passwdkey_b64 = "R15M44oRjYaJP+RQmT53E9Nlz9SBQL1HaAKefOt+9Ws="
-                saltkey_b64 = "5evW1aCyDNX6red6Lf0B8KvpnTgdfDZN8pbnQNh1ua8="
+                # passwdkey_b64 = "R15M44oRjYaJP+RQmT53E9Nlz9SBQL1HaAKefOt+9Ws="
+                # saltkey_b64 = "5evW1aCyDNX6red6Lf0B8KvpnTgdfDZN8pbnQNh1ua8="
 
-                passwd_bytes = base64.b64decode(passwdkey_b64)
-                salt_bytes = base64.b64decode(saltkey_b64)
-
-
-                key = scrypt(passwd_bytes, salt_bytes, key_len=32, N=2**20, r=8, p=1)
+                # passwd_bytes = base64.b64decode(passwdkey_b64)
+                # salt_bytes = base64.b64decode(saltkey_b64)
 
 
-                with open("userdata.bin", "rb") as file_in:
-                        tag_bytes = file_in.read(16)
-                        nonce_bytes = file_in.read(16)
-                        ciphertext_bytes = file_in.read()
+                # key = scrypt(passwd_bytes, salt_bytes, key_len=32, N=2**20, r=8, p=1)
 
 
-                AES_cipher_instance = AES.new(key, AES.MODE_GCM, nonce=nonce_bytes)
+                # with open("userdata.bin", "rb") as file_in:
+                #         tag_bytes = file_in.read(16)
+                #         nonce_bytes = file_in.read(16)
+                #         ciphertext_bytes = file_in.read()
 
-                plaintext_bytes = unpad(AES_cipher_instance.decrypt_and_verify(ciphertext_bytes, tag_bytes), AES.block_size)
+
+                # AES_cipher_instance = AES.new(key, AES.MODE_GCM, nonce=nonce_bytes)
+
+                # plaintext_bytes = unpad(AES_cipher_instance.decrypt_and_verify(ciphertext_bytes, tag_bytes), AES.block_size)
                 
-                plaintext = plaintext_bytes.decode('utf-8')
+                # plaintext = plaintext_bytes.decode('utf-8')
 
-                print(plaintext)
+                # print(plaintext)
                 
         database.close()  
 
@@ -138,7 +138,7 @@ def readDocumments():
                 notToBeCalculated=len(bson.BSON.encode({"datashared":datas["datashared"], "useraddress":datas["useraddress"], "DFT":datas["DFT"]}))*0.000001
                 if((DataSize-notToBeCalculated)>datas["datashared"]):
                         collection.update_one({"useraddress":datas["useraddress"]},{"$inc":{"DFT":dftToBeShared}})
-                        collection.update_one({"useraddress":datas["useraddress"]},{"$set":{"datashared":DataSize}})
+                        collection.update_one({"useraddress":datas["useraddress"]},{"$set":{"datashared":DataSize-notToBeCalculated}})
 
 
 if __name__ == "__main__":
