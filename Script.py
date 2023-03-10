@@ -70,6 +70,8 @@ def EncryptData():
                 port= 3302,
                 database="myDB"
         )
+        retry_config = RetryConfig(retry_limit=3)
+        qldb_driver = QldbDriver("IPFSCIDLedger", retry_config=retry_config)
         Data=collection.find()
         for datas in Data:
 
@@ -109,12 +111,6 @@ def EncryptData():
                 CID=out.decode()
 
                 print(CID)
-
-                retry_config = RetryConfig(retry_limit=3)
-
-                print("Initializing the driver")
-
-                qldb_driver = QldbDriver("IPFSCIDLedger", retry_config=retry_config)
                 
                 IPFS_CID=CID
 
