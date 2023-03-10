@@ -24,6 +24,7 @@ from Cryptodome.Util.Padding import pad, unpad
 from pyqldb.config.retry_config import RetryConfig
 from pyqldb.driver.qldb_driver import QldbDriver
 from datetime import datetime
+from datetime import date
 
 load_dotenv()
 
@@ -38,12 +39,26 @@ USER_PUBLIC_ADDRESS=""
 
 ca = certifi.where()
 
+
+
 def TransferToken():
-        
-        if(counter<=11):
+        if date.today().day != 1:
+                return
+        if(counter<=1):
                 counter=counter+1
         web3=Web3(Web3.HTTPProvider(alchemyURL))
         contract=web3.eth.contract(address=contractAddress,abi=ABI)
+        Data=collection.find()
+        for datas in Data:
+                totalDft=datas["DFT"]
+                Address=datas["useraddress"]
+                contract.functions.transfer(Address,totalDft).call()
+                collection.update_one({"useraddress":datas["useraddress"]},{"$inc":{"DFT":-datas["DFT"]}})
+        
+
+
+def EncryptData():
+        
         database=mysql.connector.connect(
                 host="DB_ENDPOINT",
                 user= "admin",
@@ -54,25 +69,20 @@ def TransferToken():
         Data=collection.find()
         for datas in Data:
 
-                totalDft=datas["DFT"]
                 Address=datas["useraddress"]
-                contract.functions.transfer(Address,totalDft).call()
-                collection.update_one({"useraddress":datas["useraddress"]},{"$inc":{"DFT":-datas["DFT"]}})
-
+                
                 cursorObject=database.cursor()
+                
                 query="SELECT * FROM users where publicAddress='{}'".format(Address)
+                
                 cursorObject.execute(query)
+                
                 myresult=cursorObject.fetchall()
 
                 passwdkey_b64=myresult[0][1]
                 saltkey_b64=myresult[0][2]
-                
 
                 data_bytes= datas.encode('UTF-8')
-                
-
-                # passwdkey_b64 = "R15M44oRjYaJP+RQmT53E9Nlz9SBQL1HaAKefOt+9Ws="
-                # saltkey_b64 = "5evW1aCyDNX6red6Lf0B8KvpnTgdfDZN8pbnQNh1ua8="
 
 
                 passwd_bytes = base64.b64decode(passwdkey_b64)
@@ -128,10 +138,12 @@ def TransferToken():
 
 def readDocumments():
 
-        if(counter>=4 and counter<=7):
-                dftToBeShared=0.25/4
-        elif(counter>=8 and counter<=11):
-                dftToBeShared=0.125/4
+        if(counter==0):
+                dftToBeShared=0.5
+        elif(counter==1):
+                dftToBeShared=0.25
+        else: 
+            dftToBeShared=0.125
         Data=collection.find()
         for datas in Data:
                 DataSize=len(bson.BSON.encode(datas))*0.000001
@@ -145,12 +157,13 @@ if __name__ == "__main__":
     client = pymongo.MongoClient(connectionString,tlsCAFile=ca)
     db = client["analytics-layer"]
     collection = db["analytics-data"]
-    dftToBeShared=0.5/4
     counter=0
 
 
 schedule.every().day.at("00:00").do(readDocumments)
-schedule.every().monday.at('21:00').do(TransferToken)
+schedule.every().monday.at('21:00').do(EncryptData)
+schedule.every().day.at("02:00").do(TransferToken)
+
 while 1:
         schedule.run_pending()
         time.sleep(1)   
