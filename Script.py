@@ -40,6 +40,10 @@ USER_PUBLIC_ADDRESS=""
 ca = certifi.where()
 
 
+def insert_documents(transaction_executor, aws_ion):
+    print("Inserting a document into IPFSCIDLedger")
+    transaction_executor.execute_statement(f"INSERT INTO USER_ADDRESS_IPFS_CID ?", aws_ion)
+
 
 def TransferToken():
         if date.today().day != 1:
@@ -104,8 +108,28 @@ def EncryptData():
                 out = p.stdout.read()
                 CID=out.decode()
 
-                IPFS_CID=CID
                 print(CID)
+
+                retry_config = RetryConfig(retry_limit=3)
+
+                print("Initializing the driver")
+
+                qldb_driver = QldbDriver("IPFSCIDLedger", retry_config=retry_config)
+                
+                IPFS_CID=CID
+
+                USER_PUBLIC_ADDRESS=Address
+
+                user_meta_data = { 
+                        'CID': IPFS_CID,
+                        'DATE': datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+                        'User_Public_Address': USER_PUBLIC_ADDRESS
+                }
+
+                qldb_driver.execute_lambda(lambda x: insert_documents(x, user_meta_data))
+
+                print(f"Document with CID ${IPFS_CID} Inserted to USER_ADDRESS_IPFS_CID Table")
+
 
                 # Decryption Part
 
@@ -133,7 +157,7 @@ def EncryptData():
 
                 # print(plaintext)
                 
-        database.close()  
+        database.close()
 
 
 def readDocumments():
@@ -172,26 +196,26 @@ while 1:
 
 # QLDB Script From Here  
 
-retry_config = RetryConfig(retry_limit=3)
+# retry_config = RetryConfig(retry_limit=3)
 
-print("Initializing the driver")
+# print("Initializing the driver")
 
-qldb_driver = QldbDriver("IPFSCIDLedger", retry_config=retry_config)
+# qldb_driver = QldbDriver("IPFSCIDLedger", retry_config=retry_config)
 
-def insert_documents(transaction_executor, aws_ion):
-    print("Inserting a document into IPFSCIDLedger")
-    transaction_executor.execute_statement(f"INSERT INTO USER_ADDRESS_IPFS_CID ?", aws_ion)
+# def insert_documents(transaction_executor, aws_ion):
+#     print("Inserting a document into IPFSCIDLedger")
+#     transaction_executor.execute_statement(f"INSERT INTO USER_ADDRESS_IPFS_CID ?", aws_ion)
 
-IPFS_CID="xq5xfqxvqtfy44422"
+# IPFS_CID="xq5xfqxvqtfy44422"
 
-USER_PUBLIC_ADDRESS="xfyatsfxafx7755"
+# USER_PUBLIC_ADDRESS="xfyatsfxafx7755"
 
-user_meta_data = { 
-            'CID': IPFS_CID,
-            'DATE': datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-            'User_Public_Address': USER_PUBLIC_ADDRESS
-          }
+# user_meta_data = { 
+#             'CID': IPFS_CID,
+#             'DATE': datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+#             'User_Public_Address': USER_PUBLIC_ADDRESS
+#           }
 
-qldb_driver.execute_lambda(lambda x: insert_documents(x, user_meta_data))
+# qldb_driver.execute_lambda(lambda x: insert_documents(x, user_meta_data))
 
-print(f"Document with CID ${IPFS_CID} Inserted to USER_ADDRESS_IPFS_CID Table")
+# print(f"Document with CID ${IPFS_CID} Inserted to USER_ADDRESS_IPFS_CID Table")
