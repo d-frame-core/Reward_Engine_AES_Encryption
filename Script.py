@@ -32,9 +32,8 @@ connectionString=os.getenv("ConnectionString")
 contractAddress=os.getenv("Address")
 ABI=os.getenv("ABI")
 alchemyURL=os.getenv("AlchemyURL")
-
-IPFS_CID=""
-USER_PUBLIC_ADDRESS=""
+privateKey=os.getenv("PrivateKey")
+publicAddress=os.getenv("PublicAddress")
 
 
 ca = certifi.where()
@@ -52,11 +51,24 @@ def TransferToken():
                 counter=counter+1
         web3=Web3(Web3.HTTPProvider(alchemyURL))
         contract=web3.eth.contract(address=contractAddress,abi=ABI)
+        Wallet_from=Web3.to_checksum_address(publicAddress)
         Data=collection.find()
         for datas in Data:
-                totalDft=datas["DFT"]
-                Address=datas["useraddress"]
-                contract.functions.transfer(Address,totalDft).call()
+                totalDft=round(datas["DFT"])
+                SendingAddress=datas["useraddress"]
+                Wallet_to=Web3.to_checksum_address(SendingAddress)
+                nonce=web3.eth.get_transaction_count(Wallet_from)
+                contract_txn=contract.functions.transfer(Wallet_to,totalDft*10**18,).build_transaction(
+                    {
+                        'chainId': 80001,
+                        'nonce': nonce,
+                        'gas': 100000,
+                        'gasPrice': web3.to_wei("20", "gwei")
+                    }
+                )
+                signed_tx=web3.eth.account.sign_transaction(contract_txn,privateKey)
+                tx_hash=web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+                print(web3.to_hex(tx_hash))
                 collection.update_one({"useraddress":datas["useraddress"]},{"$inc":{"DFT":-datas["DFT"]}})
         
 
@@ -181,8 +193,8 @@ if __name__ == "__main__":
 
 
 schedule.every().day.at("00:00").do(readDocumments)
-schedule.every().monday.at('21:00').do(EncryptData)
-schedule.every().day.at("02:00").do(TransferToken)
+schedule.every().monday.at('18:00').do(EncryptData)
+schedule.every().day.at("09:00").do(TransferToken)
 
 while 1:
         schedule.run_pending()
