@@ -25,6 +25,7 @@ from pyqldb.config.retry_config import RetryConfig
 from pyqldb.driver.qldb_driver import QldbDriver
 from datetime import datetime
 from datetime import date
+import boto3
 
 load_dotenv()
 
@@ -200,30 +201,29 @@ while 1:
         schedule.run_pending()
         time.sleep(1)   
 
+# DynamoDB Records Entry Script 
 
+def put_item():
+    dynamodb_instance = boto3.resource("dynamodb")
+    table = dynamodb_instance.Table("IPFS_USER-CID")
 
-# QLDB Script From Here  
+    try:
+        output = table.put_item(
+            Item={
+                "UserPublicAddress": "0xsgduygsdbhsdgbs",
+                "DeployedDate": datetime.now().strftime("%d/%m/%Y %H:%M:%S.%f"),
+                "IpfsCID": "0vfrwfccwfvwfcxwgfcxwggvfwc"
+            }
+        )
 
-# retry_config = RetryConfig(retry_limit=3)
+        status_code = output["ResponseMetadata"]["HTTPStatusCode"]
 
-# print("Initializing the driver")
+        if(status_code == 200):
+            print("Record entered to DynamoDB successfully")
+        else:
+            print("Error Occur During Record Insertion")
 
-# qldb_driver = QldbDriver("IPFSCIDLedger", retry_config=retry_config)
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
 
-# def insert_documents(transaction_executor, aws_ion):
-#     print("Inserting a document into IPFSCIDLedger")
-#     transaction_executor.execute_statement(f"INSERT INTO USER_ADDRESS_IPFS_CID ?", aws_ion)
-
-# IPFS_CID="xq5xfqxvqtfy44422"
-
-# USER_PUBLIC_ADDRESS="xfyatsfxafx7755"
-
-# user_meta_data = { 
-#             'CID': IPFS_CID,
-#             'DATE': datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-#             'User_Public_Address': USER_PUBLIC_ADDRESS
-#           }
-
-# qldb_driver.execute_lambda(lambda x: insert_documents(x, user_meta_data))
-
-# print(f"Document with CID ${IPFS_CID} Inserted to USER_ADDRESS_IPFS_CID Table")
+put_item()
