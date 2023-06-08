@@ -1,0 +1,26 @@
+{
+  "name": "flaskkapi",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/d-frame-core/Reward_Engine_AES_Encryption.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/d-frame-core/Reward_Engine_AES_Encryption/issues"
+  },
+  "homepage": "https://github.com/d-frame-core/Reward_Engine_AES_Encryption#readme",
+  "dependencies": {
+    "dotenv": "^16.0.3",
+    "ethers": "^6.2.3",
+    "ipfs-http-client": "^59.0.0",
+    "mysql": "^2.18.1"
+  }
+}
