@@ -5,37 +5,57 @@ from dotenv import load_dotenv
 from Cryptodome.Cipher import AES
 from Cryptodome.Protocol.KDF import scrypt
 from Cryptodome.Util.Padding import unpad
-import os
+import redis
 
 load_dotenv()
 
-AuroraDBhostCluster=os.getenv("AuroraDBhostCluster")
-UsernameAuroraDB=os.getenv("UsernameAuroraDB")
-PasswordAuroraDB=os.getenv("PasswordAuroraDB")
-PortAuroraDB=os.getenv("PortAuroraDB")
-DatabaseAuroraDB=os.getenv("DatabaseAuroraDB")
+# AuroraDBhostCluster=os.getenv("AuroraDBhostCluster")
+# UsernameAuroraDB=os.getenv("UsernameAuroraDB")
+# PasswordAuroraDB=os.getenv("PasswordAuroraDB")
+# PortAuroraDB=os.getenv("PortAuroraDB")
+# DatabaseAuroraDB=os.getenv("DatabaseAuroraDB")
 
-database=mysql.connector.connect(
-    host=AuroraDBhostCluster,
-    user=UsernameAuroraDB,
-    password=PasswordAuroraDB,
-    port=PortAuroraDB,
-    database=DatabaseAuroraDB
-)
+# database=mysql.connector.connect(
+#     host=AuroraDBhostCluster,
+#     user=UsernameAuroraDB,
+#     password=PasswordAuroraDB,
+#     port=PortAuroraDB,
+#     database=DatabaseAuroraDB
+# )
+
+# Connect to the Redis server with authentication
+redis_password = "thisismynewpassword"
+
+
+# This client is for fetching encryption keys
+redis_client1 = redis.StrictRedis(host='localhost', port=6379, db=0, password=redis_password)
+
+def getEncryptionKey(userAddress):
+    try:
+    # Retrieving Encryption Key associated with the user_address
+            return redis_client1.zrange(userAddress, 0, -1)
+    except redis.RedisError as e:
+            print(f"Error retrieving Encryption Key for {userAddress}: {e}")
+            return []
 
 # Useraddress of user
 Address="0xA0D4594DC85b492dfAc756C6D4f6398e3a005767" 
 
-cursorObject=database.cursor()
+encryptionKeys=getEncryptionKey(Address)
 
-query="SELECT * FROM users where publicAddress='{}'".format(Address)
+passwdkey_b64=encryptionKeys[0].decode()
+saltkey_b64=encryptionKeys[1].decode()
 
-cursorObject.execute(query)
+# cursorObject=database.cursor()
 
-myresult=cursorObject.fetchall()
+# query="SELECT * FROM users where publicAddress='{}'".format(Address)
 
-passwdkey_b64=myresult[0][1]
-saltkey_b64=myresult[0][2]
+# cursorObject.execute(query)
+
+# myresult=cursorObject.fetchall()
+
+# passwdkey_b64=myresult[0][1]
+# saltkey_b64=myresult[0][2]
 
 print(saltkey_b64)
 print(passwdkey_b64)

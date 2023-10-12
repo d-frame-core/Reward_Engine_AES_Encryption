@@ -1,7 +1,6 @@
 from Cryptodome.Random import get_random_bytes
 from Cryptodome.Protocol.KDF import PBKDF2
 from Cryptodome.Hash import SHA512
-import mysql.connector
 import pymongo, base64
 import os, bson, certifi
 import schedule, time
@@ -14,6 +13,7 @@ from Cryptodome.Util.Padding import pad, unpad
 from datetime import datetime
 from datetime import date
 import boto3
+import redis
 
 load_dotenv()
 
@@ -58,32 +58,35 @@ def TransferToken():
 
 
 def EncryptData():
-        
-        database=mysql.connector.connect(
-                host="DB_ENDPOINT",
-                user= "admin",
-                password="<DB_PASSWORD>",
-                port= 3302,
-                database="myDB"
-        )
-        dynamodb_instance = boto3.resource("dynamodb")
-        table = dynamodb_instance.Table("IPFS_USER-CID")
+
+        score=score+1
+
+        # Set your Redis password
+        redis_password = "thisismynewpassword"
+        # Connect to the Redis server with authentication
+
+        # This client is for fetching encryption keys
+        redis_client1 = redis.StrictRedis(host='localhost', port=6379, db=0, password=redis_password)
+        # This client is for storing ipfs CID
+        redis_client2 = redis.StrictRedis(host='localhost', port=6379, db=1, password=redis_password)
+     
+        def getEncryptionKey(userAddress):
+                try:
+                # Retrieving Encryption Key associated with the user_address
+                        return redis_client1.zrange(userAddress, 0, -1)
+                except redis.RedisError as e:
+                        print(f"Error retrieving Encryption Key for {userAddress}: {e}")
+                        return []
+
         Data=collection.find()
         for datas in Data:
 
                 Address=datas["useraddress"]
-                
-                cursorObject=database.cursor()
-                
-                query="SELECT * FROM users where publicAddress='{}'".format(Address)
-                
-                cursorObject.execute(query)
-                
-                myresult=cursorObject.fetchall()
 
-                #Quering private key of user from the Aurora MySQL DB on AWS.
-                passwdkey_b64=myresult[0][1]
-                saltkey_b64=myresult[0][2]
+                encryptionKeys=getEncryptionKey(Address)
+                
+                passwdkey_b64=encryptionKeys[0].decode()
+                saltkey_b64=encryptionKeys[1].decode()
 
                 data_bytes= datas.encode('UTF-8')
 
@@ -114,26 +117,16 @@ def EncryptData():
 
                 USER_PUBLIC_ADDRESS=Address
 
-                #Putting Cid in AWS DynamoDB
+                #Putting Cid in redis-server
                 try:
-                    output = table.put_item(
-                        Item={
-                             "UserPublicAddress": USER_PUBLIC_ADDRESS,
-                             "DeployedDate": datetime.now().strftime("%d/%m/%Y %H:%M:%S.%f"),
-                             "IpfsCID": IPFS_CID
-                       }
-                    )
-
-                    status_code = output["ResponseMetadata"]["HTTPStatusCode"]
-                    if(status_code == 200):
-                        print("Record entered to DynamoDB successfully")
-                    else:
-                        print("Error Occur During Record Insertion")
-
-                except Exception as e:
-                        print(f"An error occurred: {str(e)}")
+                # Add the ipfs_cid to the set associated with the user_address
+                        redis_client2.zadd(USER_PUBLIC_ADDRESS, {IPFS_CID: score})
+                        print(f"Added {IPFS_CID} for {USER_PUBLIC_ADDRESS}")
+                except redis.RedisError as e:
+                        print(f"Error adding {IPFS_CID} for {USER_PUBLIC_ADDRESS}: {e}")            
                 
-        database.close()
+        redis_client1.quit()
+        redis_client2.quit()
 
 
 def readDocumments():
@@ -171,7 +164,8 @@ if __name__ == "__main__":
     collection = db["analytics-data"] #Collection name inside database name in mongogDB
     print(collection)
     counter=0 #Counter is for counting the number of times the transferToken() function will be triggered
-
+    score=0 #For calculating score of adding IPFS CID in redis sorted set, IPFS CID stored with less score will be on top than CID stored with high score.
+ 
 
 #Schedule is used for automating the Script
 #Each function will be triggered at specific interval of time
